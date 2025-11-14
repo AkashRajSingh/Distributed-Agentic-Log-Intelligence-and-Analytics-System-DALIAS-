@@ -3,7 +3,7 @@
 This repository contains a minimal end-to-end implementation: ingestion -> Kafka (Redpanda) -> processing -> MongoDB -> Agent (OpenAI LLM) -> Dashboard.
 
 ## Quick start
-1. Copy `.env.example` to `.env` and fill OPENAI_API_KEY
+1. Copy `.env.example` to `.env` and fill GEMINI_API_KEY
 2. Build and run:
    ```bash
    docker-compose up --build
@@ -11,5 +11,6 @@ This repository contains a minimal end-to-end implementation: ingestion -> Kafka
 3. Visit http://localhost:8000 to view dashboard
 
 ## Notes
-- Agent uses OpenAI API; set OPENAI_API_KEY in environment.
+- Agent uses Google Gemini API; set GEMINI_API_KEY in environment.
 - Replace Redpanda with an external Kafka cluster if needed.
+- To read a more detailed overview, refer to the 'Report.pdf' file.
