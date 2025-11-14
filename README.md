@@ -2,6 +2,10 @@
 
 This repository contains a minimal end-to-end implementation: ingestion -> Kafka (Redpanda) -> processing -> MongoDB -> Agent (OpenAI LLM) -> Dashboard.
 
+#### Output
+![alt text](image.png)
+
+
 ## Quick start
 1. Copy `.env.example` to `.env` and fill GEMINI_API_KEY
 2. Build and run:
