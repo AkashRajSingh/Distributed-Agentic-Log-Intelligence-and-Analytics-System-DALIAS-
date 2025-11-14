@@ -6,7 +6,7 @@ from aiokafka import AIOKafkaConsumer
 from motor.motor_asyncio import AsyncIOMotorClient
 
 KAFKA_BOOTSTRAP = os.environ.get('KAFKA_BOOTSTRAP', 'redpanda:9092')
-LOG_TOPIC = os.environ.get('LOG_TOPIC', 'raw-logs')
+LOG_TOPIC = os.environ.get('LOG_TOPIC', 'dalias-logs')  # Changed from 'raw-logs'
 MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://mongo:27017')
 PROCESSED_COLLECTION = os.environ.get('PROCESSED_COLLECTION', 'processed_logs')
 
@@ -30,25 +30,38 @@ async def is_anomaly(log_obj):
     return False
 
 async def process_loop():
+    print(f"Connecting to Kafka at {KAFKA_BOOTSTRAP}")
+    print(f"Subscribing to topic: {LOG_TOPIC}")
+    print(f"MongoDB URI: {MONGO_URI}")
+    
     consumer = AIOKafkaConsumer(
         LOG_TOPIC,
         bootstrap_servers=KAFKA_BOOTSTRAP,
         group_id='processor-group',
         auto_offset_reset='earliest'
     )
+    
     await consumer.start()
+    print("Kafka consumer started, waiting for messages...")
+    
     try:
+        count = 0
         async for msg in consumer:
             try:
                 obj = json.loads(msg.value.decode('utf-8'))
-            except Exception:
+                obj.pop('_id', None)  # Remove _id if present
+                obj['anomaly'] = await is_anomaly(obj)
+                await collection.insert_one(obj)
+                
+                count += 1
+                if count % 10 == 0:
+                    print(f"Processed {count} logs")
+                    
+            except Exception as e:
+                print(f"Error processing message: {e}")
                 continue
-            obj['_id'] = None
-            obj['anomaly'] = await is_anomaly(obj)
-            await collection.insert_one(obj)
     finally:
         await consumer.stop()
 
 if __name__ == '__main__':
     asyncio.run(process_loop())
-

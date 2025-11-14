@@ -15,12 +15,28 @@ producer = None
 @app.on_event("startup")
 async def startup_event():
     global producer
+
     producer = AIOKafkaProducer(bootstrap_servers=KAFKA_BROKER)
-    await producer.start()
+
+    for attempt in range(20):
+        try:
+            await producer.start()
+            print("Connected to Kafka/Redpanda!")
+            break
+        except Exception as e:
+            print(f"Kafka not ready (attempt {attempt+1}/20): {e}")
+            await asyncio.sleep(2)
+    else:
+        raise RuntimeError("Failed to connect to Kafka after multiple retries")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
     await producer.stop()
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 @app.post("/ingest")
 async def ingest(request: Request):
