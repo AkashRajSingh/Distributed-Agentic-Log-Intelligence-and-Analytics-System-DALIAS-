@@ -1,0 +1,1 @@
+print('Ingestion service running')
