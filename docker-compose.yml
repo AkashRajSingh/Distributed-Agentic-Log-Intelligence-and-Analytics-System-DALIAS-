@@ -1,0 +1,125 @@
+version: "3.9"
+
+services:
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.10
+    container_name: redpanda
+    command: >
+      redpanda start
+      --overprovisioned
+      --smp=1
+      --memory=1G
+      --reserve-memory=0M
+      --node-id=0
+      --advertise-kafka-addr PLAINTEXT://redpanda:9092
+      --kafka-addr 0.0.0.0:9092
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9644/ready"]
+      interval: 10s
+      retries: 12
+    networks:
+      - dalias-net
+
+  mongo:
+    image: mongo:6.0
+    container_name: dalias-mongo
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - dalias-net
+
+  ingestion:
+    build:
+      context: ./services/common
+    container_name: ingestion
+    working_dir: /app
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "9000"]
+    volumes:
+      - ./services/ingestion:/app
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    ports:
+      - "9000:9000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/docs"]
+      interval: 5s
+      retries: 10
+    networks:
+      - dalias-net
+
+  processor:
+    build:
+      context: ./services/common
+    container_name: processor
+    working_dir: /app
+    command: ["python", "-u", "processor.py"]
+    volumes:
+      - ./services/processor:/app
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+    networks:
+      - dalias-net
+
+  agent:
+    build:
+      context: ./services/common
+    container_name: agent
+    working_dir: /app
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    command: ["python", "-u", "agent.py"]
+    volumes:
+      - ./services/agent:/app
+    depends_on:
+      mongo:
+        condition: service_started
+    networks:
+      - dalias-net
+
+  dashboard:
+    build:
+      context: ./services/common
+    container_name: dashboard
+    working_dir: /app
+    command: ["python", "-u", "app.py"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/dashboard:/app
+    depends_on:
+      - mongo
+      - processor
+      - agent
+    networks:
+      - dalias-net
+
+  log-generator:
+    build:
+      context: ./services/common
+    container_name: log-generator
+    working_dir: /app
+    command: ["python", "-u", "generator.py"]
+    volumes:
+      - ./services/log_generator:/app
+    depends_on:
+      ingestion:
+        condition: service_healthy
+    networks:
+      - dalias-net
+
+volumes:
+  mongo-data:
+
+networks:
+  dalias-net:
+    driver: bridge
