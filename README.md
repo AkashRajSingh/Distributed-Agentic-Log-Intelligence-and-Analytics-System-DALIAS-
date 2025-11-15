@@ -1,6 +1,6 @@
 # DALIAS — Distributed Agentic Log Intelligence and Analytics System
 
-This repository contains a minimal end-to-end implementation: ingestion -> Kafka (Redpanda) -> processing -> MongoDB -> Agent (OpenAI LLM) -> Dashboard.
+This repository contains a minimal end-to-end implementation: ingestion -> Kafka (Redpanda) -> processing -> MongoDB -> Agent (LLM) -> Dashboard.
 
 #### Output
 ![alt text](image.png)
