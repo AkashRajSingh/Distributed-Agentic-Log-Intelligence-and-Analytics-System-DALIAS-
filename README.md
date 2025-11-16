@@ -4,7 +4,11 @@
 
 This repository contains a minimal end-to-end implementation: ingestion -> Kafka (Redpanda) -> processing -> MongoDB -> Agent (LLM) -> Dashboard.
 
-#### Output
+## Architecture
+
+<img width="2531" height="830" alt="Architecture_Diagram" src="https://github.com/user-attachments/assets/b93a1f5d-b854-4077-9ee5-7fa13b784b9c" />
+
+## Output
 <img width="915" height="837" alt="image" src="https://github.com/user-attachments/assets/74048a03-f8e3-4016-98b6-c420fbafcfed" />
 
 
