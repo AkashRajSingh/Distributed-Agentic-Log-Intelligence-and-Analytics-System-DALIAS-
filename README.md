@@ -1,5 +1,7 @@
 # DALIAS — Distributed Agentic Log Intelligence and Analytics System
 
+#### DALIAS (Distributed Agentic Log Intelligence and Analytics System), an innovative microservices architecture that integrates event-driven communication, asynchronous stream processing, and large language model- powered analysis for intelligent log management in cloud-native systems. The system addresses the critical challenge of extracting actionable insights from massive volumes of distributed logs through a combination of rule-based anomaly detection and AI-driven analysis. Our work demonstrates how modern architectural patterns - specifically event-driven microservices, containerization, and agentic AI systems - enhance three critical quality attributes: scalability, reliability, and maintainability, making DALIAS suitable for production-grade observability infrastructure.
+
 This repository contains a minimal end-to-end implementation: ingestion -> Kafka (Redpanda) -> processing -> MongoDB -> Agent (LLM) -> Dashboard.
 
 #### Output
