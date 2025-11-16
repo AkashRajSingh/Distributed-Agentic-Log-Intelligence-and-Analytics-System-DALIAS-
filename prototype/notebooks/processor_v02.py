@@ -1,0 +1,65 @@
+"""Simple Kafka consumer that parses logs, detects anomalies, and stores into MongoDB."""
+import os
+import asyncio
+import json
+from aiokafka import AIOKafkaConsumer
+from motor.motor_asyncio import AsyncIOMotorClient
+
+KAFKA_BOOTSTRAP = os.environ.get('KAFKA_BOOTSTRAP', 'redpanda:9092')
+LOG_TOPIC = os.environ.get('LOG_TOPIC', 'dalias-logs')  # Changed from 'raw-logs'
+MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://mongo:27017')
+PROCESSED_COLLECTION = os.environ.get('PROCESSED_COLLECTION', 'processed_logs')
+
+client = AsyncIOMotorClient(MONGO_URI)
+db = client.dalias
+collection = db[PROCESSED_COLLECTION]
+
+async def is_anomaly(log_obj):
+    # naive rules-based anomaly detection
+    level = log_obj.get('level','').lower()
+    message = log_obj.get('message','')
+    meta = log_obj.get('metadata',{})
+    if level in {'error', 'critical'} or 'exception' in message:
+        return True
+    # latency pattern
+    if isinstance(meta, dict):
+        if meta.get('latency_ms') and meta['latency_ms'] > 1000:
+            return True
+    return False
+
+async def process_loop():
+    print(f"Connecting to Kafka at {KAFKA_BOOTSTRAP}")
+    print(f"Subscribing to topic: {LOG_TOPIC}")
+    print(f"MongoDB URI: {MONGO_URI}")
+    
+    consumer = AIOKafkaConsumer(
+        LOG_TOPIC,
+        bootstrap_servers=KAFKA_BOOTSTRAP,
+        group_id='processor-group',
+        auto_offset_reset='earliest'
+    )
+    
+    await consumer.start()
+    print("Kafka consumer started, waiting for messages...")
+    
+    try:
+        count = 0
+        async for msg in consumer:
+            try:
+                obj = json.loads(msg.value.decode('utf-8'))
+                obj.pop('_id', None)  # Remove _id if present
+                obj['anomaly'] = await is_anomaly(obj)
+                await collection.insert_one(obj)
+                
+                count += 1
+                if count % 10 == 0:
+                    print(f"Processed {count} logs")
+                    
+            except Exception as e:
+                print(f"Error processing message: {e}")
+                continue
+    finally:
+        await consumer.stop()
+
+if __name__ == '__main__':
+    asyncio.run(process_loop())
